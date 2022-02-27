@@ -18,10 +18,10 @@ Matplotlib==3.2.2
 
 ## 模型结构
 MAML for classification
-![image](http://47.106.74.104:8100/huangxinyi/Algorithms/tree/master/MAML/model_structure/maml/maml.png)
+![image](https://github.com/JJASMINE22/MAML/blob/master/model_structure/maml/maml.png)
 
 MAML for series prediction
-![image]( http://47.106.74.104:8100/huangxinyi/Algorithms/tree/master/MAML/model_structure/maml_lstm/maml_lstm.png)
+![image](https://github.com/JJASMINE22/MAML/blob/master/model_structure/maml_lstm/maml_lstm.png)
 
 ## 注意事项
 1. MAML结构适用于小样本模型训练，为避免过学习，模型不应设计过重
@@ -36,4 +36,5 @@ MAML for series prediction
 ## 训练步骤
 1. 分类模型：运行train.py
 2. 预测模型：运行train_lstm.py
+
 
