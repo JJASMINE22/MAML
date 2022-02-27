@@ -28,14 +28,13 @@ class MAML:
 
     """
     主要应用于小样本模型训练
-    maml原论文仅用于分类, 此处改造为数据预测
+    maml原文用于图像分类, 此处改造为数据预测
     """
-    def __init__(self, input_shape, feature_dims, lr_rate, resume_train=False):
+    def __init__(self, input_shape, feature_dims, lr_rate):
         """
         :param input_shape: 输入形状
         :param feature_dims: 时序数据特征维度
         :param lr_rate: 学习率
-        :param resume_train: 是否继续训练
         """
 
         assert isinstance(lr_rate, dict)
@@ -46,27 +45,21 @@ class MAML:
         self.lr_rate = lr_rate
         self.sub_lr = self.lr_rate['sub_lr']
         self.meta_lr = self.lr_rate['meta_lr']
-        self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.meta_lr)  # meta-optimizer
+        self.optimizer = tf.keras.optimizers.Adam(learning_rate=self.meta_lr) # adam优化器
 
-        self.loss = tf.keras.losses.MeanSquaredError()
+        self.loss = tf.keras.losses.MeanSquaredError() # 均方误差
 
         self.total_loss = []
         self.support_loss = tf.keras.metrics.Mean()
         self.query_loss = tf.keras.metrics.Mean()
         self.val_loss = tf.keras.metrics.Mean()
 
-        self.resume_train = resume_train
-
         self.model = self.CreateModel()
-        self.initial_weights = self.model.get_weights()
-
-        if self.resume_train:
-            self.model.load_weights(".\\模型文件")
 
     def CreateModel(self):
         """
         使用自定义长短期记忆网络搭建模型
-        注意: tensorflow提供的LSTM层在CUDA加速状态下无法实现MAML, 该BUG与cudnn有关
+        注意: tensorflow所提供的LSTM模块在CUDA硬件加速下无法实现MAML, 与cudnn接口bug有关
         """
         input = Input(shape=self.input_shape)
         x = MyLSTM(units=64,
@@ -102,6 +95,10 @@ class MAML:
         return Model(input, output)
 
     def forward(self, source, real):
+        """
+        This method executes a forward pass of the model using input x (model prediction).
+        It uses the lossFunction to calculate the loss and returns both the loss and the predictions
+        """
         pred = self.model(source)
         loss = tf.reduce_mean(self.loss(real,pred))
         return loss, pred
@@ -116,7 +113,7 @@ class MAML:
                 with tf.GradientTape() as support_tape:
                     support_loss, support_logits = self.forward(support_src, support_tgt)  # Compute loss of Ti
 
-                # Create temporary model to compute θ` - applying gradients
+                # 循环计算各sub模型在其task下的梯度
                 sub_gradients = support_tape.gradient(support_loss, self.model.trainable_variables)
 
                 sub_Model = MAML(self.input_shape, self.feature_dims, self.lr_rate, self.resume_train)

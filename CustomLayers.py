@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 '''
-@Project ：CNN_LSTM
-@File    ：train.py
+@Project ：MAML
+@File    ：CustomLayers.py
 @IDE     ：PyCharm 
 @Author  ：XinYi Huang
 '''
@@ -10,13 +10,14 @@ from tensorflow.keras.layers import (Add,
                                      Layer,
                                      Activation
                                      )
+from tensorflow.keras import backend as K
 import tensorflow as tf
 
 
 class MyLSTM(Layer):
     """
     完整的自定义长短期记忆网络
-    目前无法实现不定长输入的模型训练
+    目前无法实现动态seq_len的输入训练
     """
     def __init__(self,
                  units=None,
@@ -143,9 +144,8 @@ class MyLSTM(Layer):
         self.recurrent_kernel_o = self.recurrent_kernel[:, self.units * 3:]
 
         out_put = []
-        # 初始化创建单位形状的h、c, 而后使用broadcast实现形变, 减少内存占用
-        h_t_ = tf.zeros(shape=(1, self.units), dtype=tf.float32)
-        c_t_ = tf.zeros(shape=(1, self.units), dtype=tf.float32)
+        h_t_ = tf.zeros(shape=(1, self.units), dtype=tf.float32)  # h(t-1)
+        c_t_ = tf.zeros(shape=(1, self.units), dtype=tf.float32)  # C(t-1)
 
         for i in range(inputs.shape[1]):
             tf.autograph.experimental.set_loop_options(shape_invariants=[(h_t_, tf.TensorShape([None, self.units]))])
