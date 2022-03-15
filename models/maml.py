@@ -95,7 +95,7 @@ class MAML:
 
     def train(self, targets):
         """
-        创建两个tape, 控制sub模型与support模型的误差loss作用域
+        创建两个tape, 均用于附着meta模型的梯度
         """
         with tf.GradientTape() as query_tape:
             for target in targets:
@@ -103,16 +103,16 @@ class MAML:
                 with tf.GradientTape() as support_tape:
                     support_loss, support_logits = self.forward(support_src, support_tgt)  # Compute loss of Ti
 
-                # 循环计算各sub模型在其task下的梯度
+                # 循环计算各support task在meta模型下的梯度
                 sub_gradients = support_tape.gradient(support_loss, self.model.trainable_variables)
 
                 sub_Model = MAML(self.input_shape, self.class_num, self.lr_rate, self.resume_train)
                 sub_Model.model.set_weights(self.model.get_weights())
 
                 """
-                使用手动运算更新模型参数, Var→Constant
-                模型将丢失可训练属性(主动丢失梯度),
-                因此sub模型的loss可作用于support模型
+                使用手动运算更新模型参数, Var→带meta模型梯度的Constant
+                致使sub模型丢失训练属性(主动丢失梯度), 反而附着meta模型的梯度
+                因此sub模型输出的loss可梯度下降作用于meta模型
                 """
                 z = 0
                 for k in range(len(sub_Model.model.layers)):
@@ -136,6 +136,7 @@ class MAML:
                 self.query_loss(query_loss)
                 self.support_acc(support_tgt, support_logits)
                 self.query_acc(query_tgt, query_logits)
+                # 统计各附着meta模型梯度的loss
                 self.total_loss.append(query_loss)
             # 计算所有task的平均误差
             avg_query_loss = tf.reduce_mean(self.total_loss)
